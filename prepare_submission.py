@@ -16,7 +16,7 @@ from zipfile import ZipFile
 import pandas as pd
 import yaml
 
-from model.nmt_estimator import NMTEstimator
+from mbart_qe.nmt_estimator import NMTEstimator
 from pytorch_lightning import seed_everything
 
 

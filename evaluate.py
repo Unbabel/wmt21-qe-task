@@ -1,5 +1,5 @@
 import pandas as pd
-from model.nmt_estimator import NMTEstimator
+from mbart_qe.nmt_estimator import NMTEstimator
 from scipy.stats import pearsonr, spearmanr
 import numpy as np
 import argparse
@@ -33,15 +33,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model = load_checkpoint(args.checkpoint)
-    data = pd.read_csv("data/glass-box.2020-da.qe.test20.csv")
-    
-    data["TP"] = data["TP"].astype(float)
-    data["Soft-Ent"] = data["Soft-Ent"].astype(float)
-    data["Sent-Var"] = data["Sent-Var"].astype(float)
-    data["D-TP"] = data["D-TP"].astype(float)
-    data["D-Var"] = data["D-Var"].astype(float)
-    data["D-Combo"] = data["D-Combo"].astype(float)
-    data["D-Lex_Sim"] = data["D-Lex_Sim"].astype(float)
+    data = pd.read_csv("data/2020-da.qe.test20.csv")
     data["src"] = data["src"].astype(str)
     data["mt"] = data["mt"].astype(str)
     data["score"] = data["score"].astype(float)

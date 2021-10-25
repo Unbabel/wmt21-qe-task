@@ -31,8 +31,8 @@ precision: 32                             # Train with 16 bit precision
 # ---------
 # --------------------------------- Dataset -------------------------------------------------------
 pretrained_model: facebook/mbart-large-50-many-to-many-mmt
-train_path: data/glassbox-MLQE-PE/glass-box.2020-da.qe.train.csv
-val_path: data/glassbox-MLQE-PE/glass-box.2020-da.qe.dev.csv
+train_path: data/2020-da.qe.train.csv
+val_path: data/2020-da.qe.dev.csv
 
 # -------------------------------- Fine-tuning -----------------------------------------------
 learning_rate: 3.546e-05              # Learning rate to be used during fine-tuning

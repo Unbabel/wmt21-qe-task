@@ -14,7 +14,7 @@ import yaml
 import optuna
 from functools import partial
 
-from model.nmt_estimator import NMTEstimator
+from mbart_qe.nmt_estimator import NMTEstimator
 from pytorch_lightning import seed_everything
 from trainer import TrainerConfig, build_trainer
 
