@@ -17,7 +17,7 @@ from functools import partial
 from mbart_qe.nmt_estimator import NMTEstimator
 from pytorch_lightning import seed_everything
 from trainer import TrainerConfig, build_trainer
-from utils import ModelConfig
+from mbart_qe.configs import ModelConfig
 
 @click.group()
 def cli():

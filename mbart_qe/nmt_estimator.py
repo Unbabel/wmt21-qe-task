@@ -15,7 +15,7 @@ from torch import nn
 from torch.utils.data import DataLoader, RandomSampler, Subset
 from torchnlp.utils import collate_tensors
 from transformers import AdamW, MBartModel
-from utils import Config
+from mbart_qe.configs import Config
 
 from mbart_qe.metrics import Pearson, Kendall
 from mbart_qe.tokenizer import Tokenizer

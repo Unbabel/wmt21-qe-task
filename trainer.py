@@ -17,7 +17,7 @@ from pytorch_lightning.callbacks import (
 from pytorch_lightning.loggers import LightningLoggerBase, TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.utilities import rank_zero_only
-from utils import Config
+from mbart_qe.configs import Config
 
 
 class TrainerConfig(Config):
