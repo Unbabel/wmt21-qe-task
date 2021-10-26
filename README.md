@@ -20,6 +20,31 @@ For XLMR Estimators (M1) please take a look at [OpenKiwi](https://github.com/Unb
 }
 ```
 
+### Pretrained Model:
+
+```python
+from mbart_qe import download_mbart_qe, load_mbart_qe
+
+model_path = download_mbart_qe("wmt21-mbart-m2")
+model = load_mbart_qe(model_path)
+
+data = [
+    {
+        "src": "Dem Feuer konnte Einhalt geboten werden",
+        "mt": "The fire could be stopped",
+        "lp": "de-en"
+    },
+    {
+        "src": "Schulen und Kindergärten wurden eröffnet.",
+        "mt": "Schools and kindergartens were open",
+        "lp": "de-en"
+    }
+]
+
+_, segment_scores = model.predict(data, show_progress=True, batch_size=8)
+mean_score = [s[0] for s in segment_scores]
+```
+
 ### Installation:
 
 ```bash

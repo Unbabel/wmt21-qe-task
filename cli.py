@@ -17,7 +17,7 @@ from functools import partial
 from mbart_qe.nmt_estimator import NMTEstimator
 from pytorch_lightning import seed_everything
 from trainer import TrainerConfig, build_trainer
-
+from utils import ModelConfig
 
 @click.group()
 def cli():
@@ -40,8 +40,8 @@ def train(config: str) -> None:
     trainer = build_trainer(train_configs.namespace())
 
     # Build Model
-    model_config = NMTEstimator.ModelConfig(yaml_file)
-    model = NMTEstimator(model_config.namespace())
+    model_config = ModelConfig(yaml_file)
+    model = NMTEstimator(**model_config.to_dict())
     trainer.fit(model)
 
 
@@ -79,7 +79,7 @@ def search(config: str, n_trials: int) -> None:
 
         seed_everything(train_config.seed)
         trainer = build_trainer(train_config.namespace())
-        model = NMTEstimator(model_config.namespace())
+        model = NMTEstimator(model_config.to_dict())
         try:
             trainer.fit(model)
         except RuntimeError:

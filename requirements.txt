@@ -1,3 +1,4 @@
 git+git://github.com/CoderPat/COMET.git@master
 optuna
 plotly
+pytorch-nlp

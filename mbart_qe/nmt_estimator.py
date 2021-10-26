@@ -30,59 +30,49 @@ from tqdm import tqdm
 
 class NMTEstimator(pl.LightningModule):
 
-    class ModelConfig(Config):
-        pretrained_model: str = "Unbabel/mbart50-large-m2m_mlqe-pe"
+    def __init__(self, 
+        pretrained_model: str = "facebook/mbart-large-50-many-to-many-mmt",
+        monitor: str = "pearson",
+        metric_mode: str = "max",
+        loss: str = "varmse",
+        learning_rate: float = 3.0e-5,
+        encoder_learning_rate: float = 1.0e-5,
+        keep_embeddings_frozen: bool = False,
+        keep_encoder_frozen: bool = False,
+        nr_frozen_epochs: Union[float, int] = 0.3,
+        dropout: float = 0.1,
+        hidden_size: int = 2048,
+        train_path: str = None,
+        val_path: str = None,
+        test_path: str = None,
+        load_weights_from_checkpoint: Union[str, bool] = False,
+        batch_size: int = 4, 
+        **kwargs
+    ) -> None:
 
-        monitor: str = "pearson"
-        metric_mode: str = "max"
-        loss: str = "varmse"
-
-        # Optimizer
-        learning_rate: float = 3.0e-5
-        encoder_learning_rate: float = 1.0e-5
-        keep_embeddings_frozen: bool = False
-        keep_encoder_frozen: bool = False
-
-        nr_frozen_epochs: Union[float, int] = 0.3
-        dropout: float = 0.1
-        hidden_size: int = 2048
-
-        # Data configs
-        train_path: str = None
-        val_path: str = None
-        test_path: str = None
-        load_weights_from_checkpoint: Union[str, bool] = False
-        
-        # Training details
-        batch_size: int = 4
-
-    def __init__(self, hparams: Namespace):
         super().__init__()
-        self.save_hyperparameters(
-            ignore=["train_path", "val_path", "test_path", "load_weights_from_checkpoint"]
-        )
-        self._hparams = self.hparams.hparams 
-        self.model = MBartModel.from_pretrained(self._hparams.pretrained_model, output_hidden_states=True)
-        self.tokenizer = Tokenizer(self._hparams.pretrained_model)
+        self.save_hyperparameters()
+        self.model = MBartModel.from_pretrained(self.hparams.pretrained_model, output_hidden_states=True)
+        self.tokenizer = Tokenizer(self.hparams.pretrained_model)
 
-        output_dim = 1 if self._hparams.loss == "mse" else 2
+        output_dim = 1 if self.hparams.loss == "mse" else 2
         self.estimator = nn.Sequential(
-            nn.Linear(self.model.config.hidden_size*2, self._hparams.hidden_size),
+            nn.Linear(self.model.config.hidden_size*2, self.hparams.hidden_size),
             nn.Tanh(),
-            nn.Dropout(self._hparams.dropout),
-            nn.Linear(self._hparams.hidden_size, output_dim),
+            nn.Dropout(self.hparams.dropout),
+            nn.Linear(self.hparams.hidden_size, output_dim),
         )
 
         self.scalar_mix = ScalarMixWithDropout(
             mixture_size=self.model.config.decoder_layers+1,
-            dropout=self._hparams.dropout,
+            dropout=self.hparams.dropout,
             do_layer_norm=True,
         )
 
-        if self._hparams.loss == "varmse":
+        if self.hparams.loss == "varmse":
             self.loss_fn = VarianceLoss()
 
-        elif self._hparams.loss == "kl":
+        elif self.hparams.loss == "kl":
             self.loss_fn = KLLoss()
 
         else:
@@ -93,19 +83,19 @@ class NMTEstimator(pl.LightningModule):
         self.train_kendall = Kendall()
         self.dev_kendall = Kendall()
 
-        if self._hparams.nr_frozen_epochs > 0:
+        if self.hparams.nr_frozen_epochs > 0:
             self._frozen = True
             self.freeze_encoder()
         else:
             self._frozen = False
 
-        if self._hparams.keep_embeddings_frozen:
+        if self.hparams.keep_embeddings_frozen:
             self.freeze_embeddings()
             
         self.mc_dropout = False
 
-        if self._hparams.load_weights_from_checkpoint:
-            self.load_weights(self._hparams.load_weights_from_checkpoint)
+        if self.hparams.load_weights_from_checkpoint:
+            self.load_weights(self.hparams.load_weights_from_checkpoint)
 
         self.epoch_nr = 0
 
@@ -130,29 +120,29 @@ class NMTEstimator(pl.LightningModule):
     
     def configure_optimizers(self):
         self.epoch_total_steps = len(self.train_dataset) // (
-            self._hparams.batch_size * max(1, self.trainer.num_gpus)
+            self.hparams.batch_size * max(1, self.trainer.num_gpus)
         )
         parameters = [
-            {"params": self.estimator.parameters(), "lr": self._hparams.learning_rate},
-            {"params": self.model.parameters(), "lr": self._hparams.encoder_learning_rate},
-            {"params": self.scalar_mix.parameters(), "lr": self._hparams.learning_rate},
+            {"params": self.estimator.parameters(), "lr": self.hparams.learning_rate},
+            {"params": self.model.parameters(), "lr": self.hparams.encoder_learning_rate},
+            {"params": self.scalar_mix.parameters(), "lr": self.hparams.learning_rate},
         ]
         optimizer = AdamW(
-            parameters, lr=self._hparams.learning_rate, correct_bias=True
+            parameters, lr=self.hparams.learning_rate, correct_bias=True
         )
         return {
             "optimizer": optimizer,
-            "lr_scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode=self._hparams.metric_mode),
-            "monitor": self._hparams.monitor
+            "lr_scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode=self.hparams.metric_mode),
+            "monitor": self.hparams.monitor
         }
 
     def freeze_embeddings(self) -> None:
-        if self._hparams.keep_embeddings_frozen:
+        if self.hparams.keep_embeddings_frozen:
             print ("Keeping Embeddings Frozen!")
             for param in self.model.shared.parameters():
                 param.requires_grad = False
 
-        if self._hparams.keep_encoder_frozen:
+        if self.hparams.keep_encoder_frozen:
             print ("Keeping Encoder Frozen!")
             for param in self.model.encoder.parameters():
                 param.requires_grad = False
@@ -174,7 +164,7 @@ class NMTEstimator(pl.LightningModule):
                 param.requires_grad = True
 
             self._frozen = False
-            if self._hparams.keep_embeddings_frozen:
+            if self.hparams.keep_embeddings_frozen:
                 self.freeze_embeddings()
 
     def set_mc_dropout(self, value: bool):
@@ -240,14 +230,14 @@ class NMTEstimator(pl.LightningModule):
         batch_input, batch_target = batch
         predicted_scores = self.forward(**batch_input)
         
-        if self._hparams.loss == "kl":
+        if self.hparams.loss == "kl":
             loss_value = self.loss_fn(
                 predicted_scores[:, 0].view(-1), 
                 predicted_scores[:, 1].view(-1),
                 batch_target["score"],
                 batch_target["std"],
             )
-        elif self._hparams.loss == "varmse":
+        elif self.hparams.loss == "varmse":
             loss_value = self.loss_fn(
                 predicted_scores[:, 0].view(-1), 
                 predicted_scores[:, 1].view(-1),
@@ -261,9 +251,9 @@ class NMTEstimator(pl.LightningModule):
             loss_value = loss_value.unsqueeze(0)
         
         if (
-            self._hparams.nr_frozen_epochs < 1.0
-            and self._hparams.nr_frozen_epochs > 0.0
-            and batch_nb > self.epoch_total_steps * self._hparams.nr_frozen_epochs
+            self.hparams.nr_frozen_epochs < 1.0
+            and self.hparams.nr_frozen_epochs > 0.0
+            and batch_nb > self.epoch_total_steps * self.hparams.nr_frozen_epochs
         ):
             self.unfreeze_encoder()
             self._frozen = False
@@ -282,7 +272,7 @@ class NMTEstimator(pl.LightningModule):
             batch_input, batch_target = batch
             predicted_scores = self.forward(**batch_input)
             
-            if self._hparams.loss == "varmse" or self._hparams.loss == "kl":
+            if self.hparams.loss == "varmse" or self.hparams.loss == "kl":
                 predicted_scores = predicted_scores[:, 0]
 
             if batch_target["score"].size()[0] > 1:
@@ -293,7 +283,7 @@ class NMTEstimator(pl.LightningModule):
             batch_input, batch_target = batch
             predicted_scores = self.forward(**batch_input)
 
-            if self._hparams.loss == "varmse" or self._hparams.loss == "kl":
+            if self.hparams.loss == "varmse" or self.hparams.loss == "kl":
                 predicted_scores = predicted_scores[:, 0]
                 
             if batch_target["score"].size()[0] > 1:
@@ -315,7 +305,7 @@ class NMTEstimator(pl.LightningModule):
     def on_train_epoch_end(self, *args, **kwargs) -> None:
         """Hook used to unfreeze encoder during training."""
         self.epoch_nr += 1
-        if self.epoch_nr >= self._hparams.nr_frozen_epochs and self._frozen:
+        if self.epoch_nr >= self.hparams.nr_frozen_epochs and self._frozen:
             self.unfreeze_encoder()
             self._frozen = False
         
@@ -330,7 +320,7 @@ class NMTEstimator(pl.LightningModule):
         :return: List of records as dictionaries
         """
         df = pd.read_csv(path)
-        if self._hparams.loss == "kl":
+        if self.hparams.loss == "kl":
             df = df[["src", "mt", "score", "std", "lp"]]
             df["std"] = df["std"].astype(float)
         else:
@@ -367,7 +357,7 @@ class NMTEstimator(pl.LightningModule):
         if inference:
             return inputs
 
-        if self._hparams.loss == "kl":
+        if self.hparams.loss == "kl":
             targets = {
                 "score": torch.tensor(sample["score"], dtype=torch.float),
                 "std": torch.tensor(sample["std"], dtype=torch.float),
@@ -378,21 +368,21 @@ class NMTEstimator(pl.LightningModule):
         return inputs, targets
 
     def setup(self, stage) -> None:
-        self.train_dataset = self.read_csv(self._hparams.train_path)
-        self.val_reg_dataset = self.read_csv(self._hparams.val_path)
+        self.train_dataset = self.read_csv(self.hparams.train_path)
+        self.val_reg_dataset = self.read_csv(self.hparams.val_path)
         
         # Always validate the model with 2k examples from training to control overfit.
         train_subset = np.random.choice(a=len(self.train_dataset), size=2000)
         self.train_subset = Subset(self.train_dataset, train_subset)
 
-        if self._hparams.test_path:
-            self.test_dataset = self.read_csv(self._hparams.test_path)
+        if self.hparams.test_path:
+            self.test_dataset = self.read_csv(self.hparams.test_path)
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.train_dataset,
             sampler=RandomSampler(self.train_dataset),
-            batch_size=self._hparams.batch_size,
+            batch_size=self.hparams.batch_size,
             collate_fn=self.prepare_sample,
             num_workers=multiprocessing.cpu_count(),
         )
@@ -401,13 +391,13 @@ class NMTEstimator(pl.LightningModule):
         return [
             DataLoader(
                 dataset=self.train_subset,
-                batch_size=self._hparams.batch_size,
+                batch_size=self.hparams.batch_size,
                 collate_fn=self.prepare_sample,
                 num_workers=multiprocessing.cpu_count(),
             ),
             DataLoader(
                 dataset=self.val_reg_dataset,
-                batch_size=self._hparams.batch_size,
+                batch_size=self.hparams.batch_size,
                 collate_fn=self.prepare_sample,
                 num_workers=multiprocessing.cpu_count(),
             )
@@ -420,7 +410,7 @@ class NMTEstimator(pl.LightningModule):
         if cuda and torch.cuda.is_available():
             self.to("cuda")
 
-        batch_size = self._hparams.batch_size if batch_size < 1 else batch_size
+        batch_size = self.hparams.batch_size if batch_size < 1 else batch_size
         with torch.no_grad():
             batches = [
                 samples[i : i + batch_size] for i in range(0, len(samples), batch_size)

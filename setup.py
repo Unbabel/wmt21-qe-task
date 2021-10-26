@@ -12,6 +12,7 @@ setup(
     setup_requires=[],
     install_requires=[
         "optuna",
-        "plotly"
+        "plotly",
+        "pytorch-nlp"
     ]
 )
