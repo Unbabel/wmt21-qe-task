@@ -16,6 +16,7 @@ LANGUAGE_MAPPING = {
     "ja": "ja_XX",
     "ps": "ps_AF",
     "km": "km_KH",
+    "fr": "fr_XX",
 }
 
 class Tokenizer:
