@@ -1,6 +1,6 @@
 # WMT21 QE Shared Task
 
-Code for the MBART QE Estimator (M2) from [IST-Unbabel 2021 Submission for the Quality Estimation Shared Task]()
+Code for the MBART QE Estimator (M2) from [IST-Unbabel 2021 Submission for the Quality Estimation Shared Task](http://statmt.org/wmt21/pdf/2021.wmt-1.102.pdf)
 
 ![nmt-model](images/m2-upd.png)
 
